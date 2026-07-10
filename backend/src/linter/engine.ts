@@ -18,6 +18,7 @@
 import { runEslint } from "./runners/jsRunner";
 import { runPythonLinters } from "./runners/pyRunner";
 import { runStaticcheck } from "./runners/goRunner";
+import { runPHPLint } from "./runners/phpRunner";
 
 export type Severity = "error" | "warning";
 
@@ -85,8 +86,7 @@ export async function analyzeFile(filename: string, source: string): Promise<Ana
         findings = await runStaticcheck(filename, source);
         break;
       case "php":
-        // PHP se deja como próximo runner a implementar (php -l + phpcs en el sandbox).
-        findings = [];
+        findings = await runPHPLint(filename, source);
         break;
     }
     return { file: filename, language, findings };
