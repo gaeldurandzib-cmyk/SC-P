@@ -1,18 +1,3 @@
-/**
- * server/websocket.ts
- *
- * Servidor WebSocket para streaming de hallazgos en tiempo real.
- * Utiliza Socket.io para manejar salas por archivo y emitir resultados
- * de análisis conforme se van generando.
- *
- * Flujo:
- * 1. Cliente se conecta
- * 2. Cliente emite "analyze:start" con { fileId, filename, source, language }
- * 3. Se inicia análisis en segundo plano
- * 4. Se emiten "finding" eventos conforme se generan (para herramientas que usen streams)
- * 5. Se emite "analyze:complete" cuando termina
- */
-
 import type { FastifyInstance } from "fastify";
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { analyzeFile } from "../linter/engine";
@@ -58,10 +43,6 @@ export async function setupWebSockets(
     const clientId = socket.id;
     console.log(`[WS] Cliente conectado: ${clientId}`);
 
-    /**
-     * analyze:start
-     * Inicia el análisis de un archivo. Se une a una sala específica del archivo.
-     */
     socket.on(
       "analyze:start",
       async (payload: AnalyzeStartPayload) => {
@@ -76,7 +57,6 @@ export async function setupWebSockets(
           return;
         }
 
-        // Unirse a una sala específica de este archivo
         const roomId = `file:${fileId}`;
         socket.join(roomId);
         console.log(
@@ -86,13 +66,11 @@ export async function setupWebSockets(
         const startTime = Date.now();
 
         try {
-          // Ejecutar análisis
           const result: AnalysisResult = await analyzeFile(
             filename,
             source
           );
 
-          // Emitir cada hallazgo individualmente (útil para UI en tiempo real)
           for (const finding of result.findings) {
             io.to(roomId).emit("finding", {
               fileId,
@@ -101,7 +79,6 @@ export async function setupWebSockets(
             } as FindingEvent);
           }
 
-          // Emitir resumen final
           const duration = Date.now() - startTime;
           io.to(roomId).emit("analyze:complete", {
             fileId,
@@ -130,10 +107,6 @@ export async function setupWebSockets(
       }
     );
 
-    /**
-     * analyze:batch
-     * Inicia análisis de múltiples archivos en paralelo.
-     */
     socket.on(
       "analyze:batch",
       async (
@@ -163,7 +136,6 @@ export async function setupWebSockets(
         const results: Record<string, AnalysisResult> = {};
 
         try {
-          // Analizar todos en paralelo
           const analysisPromises = files.map((file) =>
             analyzeFile(file.filename, file.source).then((result) => ({
               fileId: file.fileId,
@@ -173,7 +145,6 @@ export async function setupWebSockets(
 
           const analyses = await Promise.all(analysisPromises);
 
-          // Emitir resultados conforme están listos
           for (const { fileId, result } of analyses) {
             results[fileId] = result;
 
@@ -185,7 +156,6 @@ export async function setupWebSockets(
             });
           }
 
-          // Resumen final
           const duration = Date.now() - startTime;
           const totalFindings = Object.values(results).reduce(
             (sum, r) => sum + r.findings.length,
@@ -219,15 +189,10 @@ export async function setupWebSockets(
       }
     );
 
-    /**
-     * disconnect
-     * Limpieza cuando el cliente se desconecta.
-     */
     socket.on("disconnect", () => {
       console.log(`[WS] Cliente desconectado: ${clientId}`);
     });
 
-    // Ping/pong para mantener la conexión viva
     socket.emit("connected", {
       clientId,
       timestamp: new Date().toISOString(),
