@@ -1,13 +1,3 @@
-/**
- * runners/phpRunner.ts — analiza PHP con `php -l` (lint) para errores de sintaxis.
- *
- * Este runner requiere el binario de PHP instalado (o, en producción, el
- * contenedor `devshield/phpcs-runner` que ya lo trae). En este entorno
- * de desarrollo PHP no está disponible, así que la función detecta esa
- * ausencia explícitamente y devuelve `failed` en vez de fingir un resultado.
- * La forma de invocar el binario real queda documentada aquí para cuando el
- * runner se despliegue en su contenedor.
- */
 import { spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -45,22 +35,18 @@ export async function runPHPLint(filename: string, source: string): Promise<Find
     
     await new Promise((resolve) => child.on("close", resolve));
 
-    // Parsear la salida de `php -l`
-    // Ej stderr: "Parse error: ... on line 10"
-    // Ej stdout: "No syntax errors detected in ..."
     const output = stderr || stdout;
     
     if (output.includes("Parse error") || output.includes("Fatal error")) {
       const lineMatch = output.match(/line (\d+)/);
       const line = lineMatch ? parseInt(lineMatch[1], 10) : 1;
       
-      // Extraer el mensaje de error
       const messageMatch = output.match(/Parse error: (.+?) in/);
       const message = messageMatch ? messageMatch[1] : output.split("\n")[0];
       
       findings.push({
         line,
-        column: 1, // php -l no proporciona columna exacta
+        column: 1,
         severity: "error",
         rule: "syntax_error",
         message: translatePHPError(message),
@@ -74,9 +60,6 @@ export async function runPHPLint(filename: string, source: string): Promise<Find
   }
 }
 
-/**
- * Traduce mensajes de error de PHP a español más legible.
- */
 function translatePHPError(message: string): string {
   if (message.includes("syntax error")) {
     return "Error de sintaxis en PHP.";
