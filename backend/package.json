@@ -1,0 +1,26 @@
+{
+  "name": "devshield-backend",
+  "version": "1.0.0",
+  "description": "Módulos de backend: cifrado de credenciales, cliente SSH/SFTP y motor de análisis multi-lenguaje.",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "tsx --test src/**/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ssh2": "^1.17.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "eslint": "^8.57.1",
+    "tsx": "^4.23.0"
+  }
+}
