@@ -1,13 +1,3 @@
-/**
- * runners/goRunner.ts — analiza Go con `staticcheck`.
- *
- * Este runner requiere el toolchain de Go instalado (o, en producción, el
- * contenedor `devshield/staticcheck-runner` que ya lo trae). En este entorno
- * de desarrollo Go no está disponible, así que la función detecta esa
- * ausencia explícitamente y devuelve `failed` en vez de fingir un resultado.
- * La forma de invocar el binario real queda documentada aquí para cuando el
- * runner se despliegue en su contenedor.
- */
 import { spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -24,10 +14,8 @@ function commandExists(cmd: string): Promise<boolean> {
 
 export async function runStaticcheck(filename: string, source: string): Promise<Finding[]> {
   if (!(await commandExists("staticcheck"))) {
-    // Señal explícita de "no disponible en este entorno", no un resultado inventado.
     throw new Error(
-      "staticcheck no está instalado en este entorno de desarrollo. " +
-        "En producción este runner corre dentro del contenedor devshield/staticcheck-runner."
+      "staticcheck no está instalado. Instala con: go install honnef.co/go/tools/cmd/staticcheck@latest"
     );
   }
 
@@ -37,22 +25,27 @@ export async function runStaticcheck(filename: string, source: string): Promise<
 
   try {
     const findings: Finding[] = [];
-    const child = spawn("staticcheck", ["-f", "json", filePath]);
+    const child = spawn("staticcheck", [filePath]);
     let stdout = "";
     child.stdout.on("data", (d) => (stdout += d.toString()));
+
     await new Promise((resolve) => child.on("close", resolve));
 
-    for (const line of stdout.trim().split("\n").filter(Boolean)) {
-      const parsed = JSON.parse(line);
-      findings.push({
-        line: parsed.location.line,
-        column: parsed.location.column,
-        severity: "warning",
-        rule: parsed.code,
-        message: parsed.message,
-        tool: "staticcheck",
-      });
+    for (const line of stdout.trim().split("\n")) {
+      if (!line) continue;
+      const match = line.match(/(\d+):(\d+): ([A-Z]+): (.+)/);
+      if (match) {
+        findings.push({
+          line: parseInt(match[1], 10),
+          column: parseInt(match[2], 10),
+          severity: match[3] === "error" ? "error" : "warning",
+          rule: match[3],
+          message: match[4],
+          tool: "staticcheck",
+        });
+      }
     }
+
     return findings;
   } finally {
     rmSync(dir, { recursive: true, force: true });
