@@ -1,0 +1,50 @@
+# Dependencias
+node_modules/
+package-lock.json
+yarn.lock
+
+# Compilado
+dist/
+*.js
+*.js.map
+*.d.ts
+!*.config.js
+!.eslintrc.js
+
+# Entorno
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporal
+tmp/
+temp/
+*.tmp
+
+# Archivos sensibles
+.ssh/
+*.key
+*.pem
+credentials.json
+
+# Docker
+.dockerignore
